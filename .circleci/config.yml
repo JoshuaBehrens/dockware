@@ -9,10 +9,11 @@ jobs:
 
       
   build-shopware-arm:
-    machine:
-      image: php:cli
-      docker_layer_caching: true 
-    #resource_class: arm.medium
+    docker:
+      - image: php:8.2.1-cli
+    #machine:
+    #  - docker_layer_caching: true 
+    resource_class: arm.medium
 
     steps:
     # Specify the execution environment. You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
@@ -40,10 +41,11 @@ jobs:
       - run: make test image=play tag=6.4.18.1 -B
 
   build-shopware-amd:
-    machine:
-      image: php:cli
-      docker_layer_caching: true 
-   # resource_class: amd.medium
+    docker:
+      - image: php:8.2.1-cli
+    #machine:
+    #  - docker_layer_caching: true 
+    resource_class: amd.medium
 
     steps:
     # Specify the execution environment. You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
