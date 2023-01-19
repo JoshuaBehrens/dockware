@@ -2,10 +2,18 @@
 # See: https://circleci.com/docs/2.0/language-php/
 version: 2.1
 orbs:
-  composer: stockfiller/composer@1.0.0
+  php: circleci/php@1.1.0
 # Define a job to be invoked later in a workflow.
 # See: https://circleci.com/docs/2.0/configuration-reference/#jobs
 jobs:
+
+  install_composer_packages:
+    executor: php/default
+    steps:
+      - checkout
+      - php/install-composer:
+          install-version: 2.5.1
+
   build-shopware-arm:
     machine:
       image: ubuntu-2204:current
@@ -16,7 +24,6 @@ jobs:
     # Specify the execution environment. You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
     # See: https://circleci.com/docs/2.0/configuration-reference/#docker-machine-macos-windows-executor
       - checkout
-      - composer/install
       
       #Install Dependencies      
       - run: make install
@@ -63,8 +70,13 @@ workflows:
   build-base-image:
     #when: << pipeline.parameters.build-image >>
     jobs:
-      - build-shopware-arm
-      - build-shopware-arm      
+      - install_composer_packages
+      - build-shopware-arm:
+          requires:
+            - install_composer_packages
+      - build-shopware-arm:
+          requires:
+            - install_composer_packages
       #- merge-manifest:
           #requires:
           #  - php80-arm64
