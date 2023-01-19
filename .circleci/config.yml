@@ -12,7 +12,7 @@ jobs:
     machine:
       image: php:cli
       docker_layer_caching: true 
-    resource_class: arm.medium
+    #resource_class: arm.medium
 
     steps:
     # Specify the execution environment. You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
@@ -43,7 +43,7 @@ jobs:
     machine:
       image: php:cli
       docker_layer_caching: true 
-    resource_class: amd.medium
+   # resource_class: amd.medium
 
     steps:
     # Specify the execution environment. You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
