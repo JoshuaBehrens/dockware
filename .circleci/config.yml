@@ -6,16 +6,7 @@ version: 2.1
 # See: https://circleci.com/docs/2.0/configuration-reference/#jobs
 jobs:
 
-  install_composer_packages:
-    machine:
-      image: ubuntu-2204:current
-    steps:
-      - checkout
-      - run: apt-get update
-      - run: apt-get install -y php-cli unzip
-      - run: php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
-      - run: php composer-setup.php
-      - run: sudo mv composer.phar /usr/local/bin/composer
+
       
   build-shopware-arm:
     machine:
@@ -27,6 +18,11 @@ jobs:
     # Specify the execution environment. You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
     # See: https://circleci.com/docs/2.0/configuration-reference/#docker-machine-macos-windows-executor
       - checkout
+      - run: apt-get update
+      - run: apt-get install -y php-cli unzip
+      - run: php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+      - run: php composer-setup.php
+      - run: sudo mv composer.phar /usr/local/bin/composer
       
       #Install Dependencies      
       - run: make install
@@ -53,6 +49,11 @@ jobs:
     # Specify the execution environment. You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
     # See: https://circleci.com/docs/2.0/configuration-reference/#docker-machine-macos-windows-executor
       - checkout
+      - run: apt-get update
+      - run: apt-get install -y php-cli unzip
+      - run: php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+      - run: php composer-setup.php
+      - run: sudo mv composer.phar /usr/local/bin/composer
 
       #Install Dependencies      
       - run: make install
@@ -73,13 +74,11 @@ workflows:
   build-base-image:
     #when: << pipeline.parameters.build-image >>
     jobs:
-      - install_composer_packages
-      - build-shopware-arm:
-          requires:
-            - install_composer_packages
-      - build-shopware-arm:
-          requires:
-            - install_composer_packages
+     
+      - build-shopware-arm
+     
+      - build-shopware-arm
+     
       #- merge-manifest:
           #requires:
           #  - php80-arm64
