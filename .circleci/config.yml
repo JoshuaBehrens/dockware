@@ -10,7 +10,7 @@ jobs:
       
   build-shopware-arm:
     machine:
-      image: dockware:flex:latest
+      image: php:cli
       docker_layer_caching: true 
     resource_class: arm.medium
 
@@ -41,7 +41,7 @@ jobs:
 
   build-shopware-amd:
     machine:
-      image: dockware:flex:latest
+      image: php:cli
       docker_layer_caching: true 
     resource_class: amd.medium
 
