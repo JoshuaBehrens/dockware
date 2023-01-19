@@ -9,10 +9,9 @@ jobs:
 
       
   build-shopware-arm:
-    docker:
-      - image: php:8.2.1-cli
-    #machine:
-    #  - docker_layer_caching: true 
+    machine:
+      image: ubuntu-2204:current
+      docker_layer_caching: true 
     resource_class: arm.medium
 
     steps:
