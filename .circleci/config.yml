@@ -2,12 +2,23 @@
 # See: https://circleci.com/docs/2.0/language-php/
 version: 2.1
 
+workflows:  
+  build-image:  
+    jobs:
+      - build-shopware-arm        
+      - build-shopware-amd
+      - create-manifest-push:          
+          requires:
+            - build-shopware-arm
+            - build-shopware-amd
+
+        
+
+
+
 # Define a job to be invoked later in a workflow.
 # See: https://circleci.com/docs/2.0/configuration-reference/#jobs
 jobs:
-
-
-      
   build-shopware-arm:
     machine:
       image: ubuntu-2204:current
@@ -34,10 +45,20 @@ jobs:
       - run: make verify image=play tag=6.4.18.1 -B
 
       #name: Build Image
-      - run: make build image=play tag=6.4.18.1 -B
+      - run: ./dist/images/play/6.4.18.1 && DOCKER_BUILDKIT=1 docker build -t dockware/play:6.4.18.1-arm64 .
 
       # Run SVRUnit Tests
       - run: make test image=play tag=6.4.18.1 -B
+
+      - run:
+          name: Publish Docker Image to Docker Hub
+          command: |
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+      - run:
+          name: push amd image
+          command: |
+            docker push dockware/play:6.4.18.1-amd64
+  
 
   build-shopware-amd:
     machine:
@@ -65,23 +86,35 @@ jobs:
       - run: make verify image=play tag=6.4.18.1 -B
 
       #name: Build Image
-      - run: make build image=play tag=6.4.18.1 -B
+      - run: ./dist/images/play/6.4.18.1 && DOCKER_BUILDKIT=1 docker build -t dockware/play:6.4.18.1-amd64 .
 
       # Run SVRUnit Tests
       - run: make test image=play tag=6.4.18.1 -B
+      - run:
+          name: Publish Docker Image to Docker Hub
+          command: |
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+      - run:
+          name: push amd image
+          command: |
+            docker push dockware/play:6.4.18.1-amd64
+  
+  create-manifest-push:
+    machine:
+      image: ubuntu-2204:current
+      docker_layer_caching: true 
+    resource_class: medium
+    
+    steps:
+      - run:
+          name: Publish Docker Image to Docker Hub
+          command: |
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            
+      - run: docker manifest create dockerhub.com/dockware/play:6.4.18.1 --amend dockerhub.com/dockware/play:6.4.18.1-amd64 --amend dockerhub.com/dockware/play:6.4.18.1-arm64
+      
+      - run: docker manifest push dockerhub.com/dockware/play:6.4.18.1
 
-workflows:
-  build-base-image:
-    #when: << pipeline.parameters.build-image >>
-    jobs:
-     
-      - build-shopware-arm
-     
-      - build-shopware-arm
-     
-      #- merge-manifest:
-          #requires:
-          #  - php80-arm64
-          #  - php80-amd64
-          #  - php81-arm64
-          #  - php81-amd64
+
+
+        
