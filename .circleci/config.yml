@@ -1,19 +1,22 @@
 # PHP CircleCI 2.0 configuration file
 # See: https://circleci.com/docs/2.0/language-php/
 version: 2.1
-orbs:
-  php: circleci/php@1.1.0
+
 # Define a job to be invoked later in a workflow.
 # See: https://circleci.com/docs/2.0/configuration-reference/#jobs
 jobs:
 
   install_composer_packages:
-    executor: php/default
+    machine:
+      image: ubuntu-2204:current
     steps:
       - checkout
-      - php/install-composer:
-          install-version: 2.5.1
-
+      - run: apt-get update
+      - run: apt-get install -y php-cli unzip
+      - run: php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+      - run: php composer-setup.php
+      - run: sudo mv composer.phar /usr/local/bin/composer
+      
   build-shopware-arm:
     machine:
       image: ubuntu-2204:current
