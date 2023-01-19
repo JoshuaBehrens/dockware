@@ -15,10 +15,12 @@ jobs:
     # Specify the execution environment. You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
     # See: https://circleci.com/docs/2.0/configuration-reference/#docker-machine-macos-windows-executor
       - checkout
-      - run: apt update
-      - run: apt install php-cli unzip
-      - run: -sS https://getcomposer.org/installer -o /tmp/composer-setup.php
-      - run: php /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer 
+      - run: apt-get update
+      - run: apt-get install -y php-cli unzip
+      
+      - run: php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+      - run: php composer-setup.php
+      - run: mv composer.phar /usr/local/bin/composer
 
       #Install Dependencies      
       - run: make install
