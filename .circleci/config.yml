@@ -43,8 +43,8 @@ workflows:
                         equal: ["", << pipeline.parameters.buildShopwareVersion >>]
         jobs:
             -   build-image-arm64:
+                    imageName: "dev"
                     name: build-shopware-play-arm64
-                    imageName: "dev"                    
                     imageTag: << pipeline.parameters.buildShopwareVersion >>
             -   build-image-arm64:
                     name: build-shopware-play-arm64
@@ -57,12 +57,11 @@ workflows:
                     imageTag: << pipeline.parameters.buildShopwareVersion >>
 
             -   build-image-amd64:
-                    name: build-shopware-play-amd64
+                    name: build-shopware-dev-amd64
                     imageName: "play"
                     imageTag: << pipeline.parameters.buildShopwareVersion >>
 
             -   create-manifest-push:
-                    name: create-manifest-for-dev
                     imageName: "dev"
                     imageTag: << pipeline.parameters.buildShopwareVersion >>
                     requires:
@@ -70,7 +69,6 @@ workflows:
                         - build-shopware-dev-arm64
 
             -   create-manifest-push:
-                    name: create-manifest-for-play
                     imageName: "play"
                     imageTag: << pipeline.parameters.buildShopwareVersion >>
                     requires:
@@ -96,7 +94,7 @@ jobs:
         steps:
             - checkout
             - install_requirements
-            -   build_and_push_image:
+            - build_and_push_image:
                     imageName: <<parameters.imageName>>
                     imageTag: <<parameters.imageTag>>
                     imageArch: "arm64"
