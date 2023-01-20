@@ -39,7 +39,7 @@ jobs:
       - run: make install
 
       #ORCA Generate
-      - run: make generate -B
+      - run: make generate phar=1 -B
 
       #Verify Configuration
       - run: make verify image=play tag=6.4.18.1 -B
@@ -80,7 +80,7 @@ jobs:
       - run: make install
 
       #ORCA Generate
-      - run: make generate -B
+      - run: make generate phar=1 -B
 
       #Verify Configuration
       - run: make verify image=play tag=6.4.18.1 -B
