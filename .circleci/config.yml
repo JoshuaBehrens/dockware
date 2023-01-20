@@ -138,8 +138,8 @@ jobs:
                     command: |
                         echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
 
-            -   run: docker manifest create dockerhub.com/dockware/<< parameters.imageName >>:<< parameters.imageTag >> --amend dockerhub.com/dockware/<< parameters.imageName >>:<< parameters.imageTag >>-amd64 --amend dockerhub.com/dockware/<< parameters.imageName >>:<< parameters.imageTag >>-arm64
-            -   run: docker manifest push dockerhub.com/dockware/<< parameters.imageName >>:<< parameters.imageTag >>
+            -   run: docker manifest create dockware/<< parameters.imageName >>:<< parameters.imageTag >> --amend dockware/<< parameters.imageName >>:<< parameters.imageTag >>-amd64 --amend dockware/<< parameters.imageName >>:<< parameters.imageTag >>-arm64
+            -   run: docker manifest push dockware/<< parameters.imageName >>:<< parameters.imageTag >>
 
 
 commands:
