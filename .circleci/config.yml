@@ -1,133 +1,178 @@
-# PHP CircleCI 2.0 configuration file
-# See: https://circleci.com/docs/2.0/language-php/
 version: 2.1
 
-workflows:  
-  build-image:  
-    jobs:
-      - build-shopware-arm        
-      - build-shopware-amd
-      - create-manifest-push:          
-          requires:
-            - build-shopware-arm
-            - build-shopware-amd
-
-        
 parameters:
-  imageName:
-    type: string
-    default: ""
-  imageTag:
-    type: string
-    default: ""
+    imageName:
+        type: string
+        default: "false"
+    imageTag:
+        type: string
+        default: "false"
+    doBuild:
+        description: make sure a push does not trigger any workflow
+        type: boolean
+        default: false
+
+workflows:
+    release-single-image:
+        when:
+            and:
+                -   equal: [true, << pipeline.parameters.doBuild >>]
+        jobs:
+            -   build-image-arm64:
+                    imageName: << pipeline.parameters.imageName >>
+                    imageTag: << pipeline.parameters.imageTag >>
+            -   build-image-amd64:
+                    imageName: << pipeline.parameters.imageName >>
+                    imageTag: << pipeline.parameters.imageTag >>
+
+            -   create-manifest-push:
+                    imageName: << pipeline.parameters.imageName >>
+                    imageTag: << pipeline.parameters.imageTag >>
+                    requires:
+                        - build-image-arm64
+                        - build-image-amd64
+
+    release-shopware-version:
+        when:
+            and:
+                -   equal: [true, << pipeline.parameters.doBuild >>]
+        jobs:
+            -   build-image-arm64:
+                    imageName: "dev"
+                    imageTag: << pipeline.parameters.imageTag >>
+            -   build-image-arm64:
+                    imageName: "play"
+                    imageTag: << pipeline.parameters.imageTag >>
+
+            -   build-image-amd64:
+                    imageName: "dev"
+                    imageTag: << pipeline.parameters.imageTag >>
+
+            -   build-image-amd64:
+                    imageName: "play"
+                    imageTag: << pipeline.parameters.imageTag >>
+
+            -   create-manifest-push:
+                    imageName: "dev"
+                    imageTag: << pipeline.parameters.imageTag >>
+                    requires:
+                        - build-image-arm64
+                        - build-image-amd64
+
+            -   create-manifest-push:
+                    imageName: "play"
+                    imageTag: << pipeline.parameters.imageTag >>
+                    requires:
+                        - build-image-arm64
+                        - build-image-amd64
+
 
 # Define a job to be invoked later in a workflow.
 # See: https://circleci.com/docs/2.0/configuration-reference/#jobs
 jobs:
-  build-shopware-arm:
-    machine:
-      image: ubuntu-2204:current
-      docker_layer_caching: true 
-    resource_class: arm.medium
+    build-image-arm64:
+        parameters:
+            imageName:
+                type: string
+            imageTag:
+                type: string
 
-    steps:
-    # Specify the execution environment. You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
-    # See: https://circleci.com/docs/2.0/configuration-reference/#docker-machine-macos-windows-executor
-      - checkout
-      - run: sudo apt-get update
-      - run: sudo apt-get install -y php-cli php-xml unzip
-      - run: php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
-      - run: php composer-setup.php
-      - run: sudo mv composer.phar /usr/local/bin/composer
-      
-      #Install Dependencies      
-      - run: make install
+        machine:
+            image: ubuntu-2204:current
+            docker_layer_caching: true
+        resource_class: arm.medium
 
-      #ORCA Generate
-      - run: make generate phar=1 -B
+        steps:
+            - checkout
+            - install_requirements
+            -   build_and_push_image:
+                    imageName: <<parameters.imageName>>
+                    imageTag: <<parameters.imageTag>>
+                    imageArch: "arm64"
 
-      #Verify Configuration
-      - run: make verify image=<< pipeline.parameters.imageName >> tag=<< pipeline.parameters.imageTag >> -B
+    build-image-amd64:
+        machine:
+            image: ubuntu-2204:current
+            docker_layer_caching: true
+        resource_class: medium
 
-      #name: Build Image
-      - run: cd ./dist/images/<< pipeline.parameters.imageName >>/<< pipeline.parameters.imageTag >> && DOCKER_BUILDKIT=1 docker build -t dockware/<< pipeline.parameters.imageName >>:<< pipeline.parameters.imageTag >> .
+        parameters:
+            imageName:
+                type: string
+            imageTag:
+                type: string
+        steps:
+            - checkout
+            - install_requirements
+            -   build_and_push_image:
+                    imageName: << parameters.imageName >>
+                    imageTag: << parameters.imageTag >>
+                    imageArch: "amd64"
 
-      # Run SVRUnit Tests
-      - run: make test image=<< pipeline.parameters.imageName >> tag=<< pipeline.parameters.imageTag >> -B
+    create-manifest-push:
+        machine:
+            image: ubuntu-2204:current
+            docker_layer_caching: true
+        resource_class: medium
 
-      - run:
-          name: Publish Docker Image to Docker Hub
-          command: |
-            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-      - run:
-          name: Create alias to push as arm64
-          command: |
-            docker tag dockware/<< pipeline.parameters.imageName >>:<< pipeline.parameters.imageName >> dockware/<< pipeline.parameters.imageName >>:<< pipeline.parameters.imageTag >>-arm64
-      - run:
-          name: push amd image
-          command: |
-            docker push dockware/<< pipeline.parameters.imageName >>:<< pipeline.parameters.imageName >>-arm64
-  
+        parameters:
+            imageName:
+                type: string
+            imageTag:
+                type: string
 
-  build-shopware-amd:
-    machine:
-      image: ubuntu-2204:current
-      docker_layer_caching: true 
-    resource_class: medium
+        steps:
+            -   run:
+                    name: Publish Docker Image to Docker Hub
+                    command: |
+                        echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
 
-    steps:
-    # Specify the execution environment. You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
-    # See: https://circleci.com/docs/2.0/configuration-reference/#docker-machine-macos-windows-executor
-      - checkout
-      - run: sudo apt-get update
-      - run: sudo apt-get install -y php-cli php-xml unzip
-      - run: php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
-      - run: php composer-setup.php
-      - run: sudo mv composer.phar /usr/local/bin/composer
-
-      #Install Dependencies      
-      - run: make install
-
-      #ORCA Generate
-      - run: make generate phar=1 -B
-
-      #Verify Configuration
-      - run: make verify image=<< pipeline.parameters.imageName >> tag=<< pipeline.parameters.imageTag >> -B
-
-      #name: Build Image
-      - run: cd ./dist/images/<< pipeline.parameters.imageName >>/<< pipeline.parameters.imageTag >> && DOCKER_BUILDKIT=1 docker build -t dockware/<< pipeline.parameters.imageName >>:<< pipeline.parameters.imageTag >> .
-
-      # Run SVRUnit Tests
-      - run: make test image=<< pipeline.parameters.imageName >> tag=<< pipeline.parameters.imageTag >> -B
-      - run:
-          name: Publish Docker Image to Docker Hub
-          command: |
-            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-      - run:
-          name: Create alias to push as amd64
-          command: |
-            docker tag dockware/<< pipeline.parameters.imageName >>:<< pipeline.parameters.imageTag >> dockware/<< pipeline.parameters.imageName >>:<< pipeline.parameters.imageTag >>-amd64
-      - run:
-          name: push amd image
-          command: |
-            docker push dockware/<< pipeline.parameters.imageName >>:<< pipeline.parameters.imageTag >>-amd64
-  
-  create-manifest-push:
-    machine:
-      image: ubuntu-2204:current
-      docker_layer_caching: true 
-    resource_class: medium
-    
-    steps:
-      - run:
-          name: Publish Docker Image to Docker Hub
-          command: |
-            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-            
-      - run: docker manifest create dockerhub.com/dockware/<< pipeline.parameters.imageName >>:<< pipeline.parameters.imageTag >> --amend dockerhub.com/dockware/<< pipeline.parameters.imageName >>:<< pipeline.parameters.imageTag >>-amd64 --amend dockerhub.com/dockware/<< pipeline.parameters.imageName >>:<< pipeline.parameters.imageTag >>-arm64
-      
-      - run: docker manifest push dockerhub.com/dockware/<< pipeline.parameters.imageName >>:<< pipeline.parameters.imageTag >>
+            -   run: docker manifest create dockerhub.com/dockware/<< parameters.imageName >>:<< parameters.imageTag >> --amend dockerhub.com/dockware/<< parameters.imageName >>:<< parameters.imageTag >>-amd64 --amend dockerhub.com/dockware/<< parameters.imageName >>:<< parameters.imageTag >>-arm64
+            -   run: docker manifest push dockerhub.com/dockware/<< parameters.imageName >>:<< parameters.imageTag >>
 
 
+commands:
+    install_requirements:
+        steps:
+            -   run: sudo apt-get update
+            -   run: sudo apt-get install -y php-cli php-xml unzip
+            -   run: php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+            -   run: php composer-setup.php
+            -   run: sudo mv composer.phar /usr/local/bin/composer
 
-        
+            #Install Dependencies
+            -   run: make install
+
+            #ORCA Generate
+            -   run: make generate phar=1 -B
+
+
+    build_and_push_image:
+        parameters:
+            imageName:
+                type: string
+            imageTag:
+                type: string
+            imageArch:
+                type: string
+        steps:
+            #Verify Configuration
+            -   run: make verify image=<< parameters.imageName >> tag=<< parameters.imageTag >> -B
+
+            #name: Build Image
+            -   run: cd ./dist/images/<< parameters.imageName >>/<< parameters.imageTag >> && DOCKER_BUILDKIT=1 docker build -t dockware/<< parameters.imageName >>:<< parameters.imageTag >> .
+
+            # Run SVRUnit Tests
+            -   run: make test image=<< parameters.imageName >> tag=<< parameters.imageTag >> -B
+            -   run:
+                    name: Publish Docker Image to Docker Hub
+                    command: |
+                        echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            -   run:
+                    name: Create alias to push as amd64
+                    command: |
+                        docker tag dockware/<< parameters.imageName >>:<< parameters.imageTag >> dockware/<< parameters.imageName >>:<< parameters.imageTag >>-<< parameters.imageArch >>
+            -   run:
+                    name: push amd image
+                    command: |
+                        docker push dockware/<< parameters.imageName >>:<< parameters.imageTag >>-<< parameters.imageArch >>
