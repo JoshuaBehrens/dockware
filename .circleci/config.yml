@@ -13,8 +13,13 @@ workflows:
             - build-shopware-amd
 
         
-
-
+parameters:
+  imageName:
+    type: string
+    default: ""
+  imageTag:
+    type: string
+    default: ""
 
 # Define a job to be invoked later in a workflow.
 # See: https://circleci.com/docs/2.0/configuration-reference/#jobs
@@ -42,13 +47,13 @@ jobs:
       - run: make generate phar=1 -B
 
       #Verify Configuration
-      - run: make verify image=play tag=6.4.18.1 -B
+      - run: make verify image=<< pipeline.parameters.imageName >> tag=<< pipeline.parameters.imageTag >> -B
 
       #name: Build Image
-      - run: cd ./dist/images/play/6.4.18.1 && DOCKER_BUILDKIT=1 docker build -t dockware/play:6.4.18.1 .
+      - run: cd ./dist/images/<< pipeline.parameters.imageName >>/<< pipeline.parameters.imageTag >> && DOCKER_BUILDKIT=1 docker build -t dockware/<< pipeline.parameters.imageName >>:<< pipeline.parameters.imageTag >> .
 
       # Run SVRUnit Tests
-      - run: make test image=play tag=6.4.18.1 -B
+      - run: make test image=<< pipeline.parameters.imageName >> tag=<< pipeline.parameters.imageTag >> -B
 
       - run:
           name: Publish Docker Image to Docker Hub
@@ -57,11 +62,11 @@ jobs:
       - run:
           name: Create alias to push as arm64
           command: |
-            docker tag dockware/play:6.4.18.1 dockware/play:6.4.18.1-arm64
+            docker tag dockware/<< pipeline.parameters.imageName >>:<< pipeline.parameters.imageName >> dockware/<< pipeline.parameters.imageName >>:<< pipeline.parameters.imageTag >>-arm64
       - run:
           name: push amd image
           command: |
-            docker push dockware/play:6.4.18.1-arm64
+            docker push dockware/<< pipeline.parameters.imageName >>:<< pipeline.parameters.imageName >>-arm64
   
 
   build-shopware-amd:
@@ -87,13 +92,13 @@ jobs:
       - run: make generate phar=1 -B
 
       #Verify Configuration
-      - run: make verify image=play tag=6.4.18.1 -B
+      - run: make verify image=<< pipeline.parameters.imageName >> tag=<< pipeline.parameters.imageTag >> -B
 
       #name: Build Image
-      - run: cd ./dist/images/play/6.4.18.1 && DOCKER_BUILDKIT=1 docker build -t dockware/play:6.4.18.1 .
+      - run: cd ./dist/images/<< pipeline.parameters.imageName >>/<< pipeline.parameters.imageTag >> && DOCKER_BUILDKIT=1 docker build -t dockware/<< pipeline.parameters.imageName >>:<< pipeline.parameters.imageTag >> .
 
       # Run SVRUnit Tests
-      - run: make test image=play tag=6.4.18.1 -B
+      - run: make test image=<< pipeline.parameters.imageName >> tag=<< pipeline.parameters.imageTag >> -B
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -101,11 +106,11 @@ jobs:
       - run:
           name: Create alias to push as amd64
           command: |
-            docker tag dockware/play:6.4.18.1 dockware/play:6.4.18.1-amd64
+            docker tag dockware/<< pipeline.parameters.imageName >>:<< pipeline.parameters.imageTag >> dockware/<< pipeline.parameters.imageName >>:<< pipeline.parameters.imageTag >>-amd64
       - run:
           name: push amd image
           command: |
-            docker push dockware/play:6.4.18.1-amd64
+            docker push dockware/<< pipeline.parameters.imageName >>:<< pipeline.parameters.imageTag >>-amd64
   
   create-manifest-push:
     machine:
@@ -119,9 +124,9 @@ jobs:
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             
-      - run: docker manifest create dockware/play:6.4.18.1 --amend dockware/play:6.4.18.1-amd64 --amend dockware/play:6.4.18.1-arm64
+      - run: docker manifest create dockerhub.com/dockware/<< pipeline.parameters.imageName >>:<< pipeline.parameters.imageTag >> --amend dockerhub.com/dockware/<< pipeline.parameters.imageName >>:<< pipeline.parameters.imageTag >>-amd64 --amend dockerhub.com/dockware/<< pipeline.parameters.imageName >>:<< pipeline.parameters.imageTag >>-arm64
       
-      - run: docker manifest push dockware/play:6.4.18.1
+      - run: docker manifest push dockerhub.com/dockware/<< pipeline.parameters.imageName >>:<< pipeline.parameters.imageTag >>
 
 
 
